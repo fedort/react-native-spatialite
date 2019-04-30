@@ -312,7 +312,7 @@ RCT_EXPORT_METHOD(finalizeStatement:(NSString *)databaseId statementId: (NSStrin
     });
 }
 
-RCT_EXPORT_METHOD(executeQuery:(NSString *)filename sql: (NSString *)sql andParams: (NSArray *)params callback: (RCTResponseSenderBlock)callback)
+RCT_EXPORT_METHOD(executeQuery:(NSString *)databaseId sql: (NSString *)sql andParams: (NSArray *)params callback: (RCTResponseSenderBlock)callback)
 {
     if (!callback) {
         RCTLogError(@"Called executeQuery without a callback.");
@@ -320,43 +320,9 @@ RCT_EXPORT_METHOD(executeQuery:(NSString *)filename sql: (NSString *)sql andPara
     }
     dispatch_async(SpatiaLiteQueue(), ^{
 
-        // 1. open database
-        // 2. prepare statement
-        // 3. step statement
-        // 4. close database
-
-
-        // OPEN DATABASE
-
-        NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
-        NSString *documentsDirectory = [paths objectAtIndex:0];
-        NSString *dbPath = filename;
-
-        if (![[NSFileManager defaultManager] fileExistsAtPath:dbPath]) {
-            // If the db file doesn't exist in the documents directory
-            // but it does exist in the bundle then copy it over now
-            NSString *sourcePath = [[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent:filename];
-            NSError *error;
-            if ([[NSFileManager defaultManager] fileExistsAtPath:sourcePath]) {
-                [[NSFileManager defaultManager] copyItemAtPath:sourcePath toPath:dbPath error:&error];
-                if (error != nil) {
-                    callback(@[[error localizedDescription], [NSNull null]]);
-                    return;
-                }
-            }
-        }
-
-        sqlite3 *db;
-        //BOOL openDatabaseResult = sqlite3_open([dbPath UTF8String], &db);
-        void *cache;
-
-        BOOL openDatabaseResult = sqlite3_open_v2 ([dbPath UTF8String], &db,
-                                                   SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
-
-        if(openDatabaseResult != SQLITE_OK) {
-            callback(@[@"Couldn't open database", [NSNull null]]);
-            return;
-        }
+        // 1. prepare statement
+        // 2. step statement
+        // 3. finalize statement
 
         // cache = spatialite_alloc_connection ();
         // spatialite_init_ex (db, cache, 0);
@@ -364,21 +330,25 @@ RCT_EXPORT_METHOD(executeQuery:(NSString *)filename sql: (NSString *)sql andPara
         spatialite_init (0);
         printf("Spatialite version: %s\n", spatialite_version());
 
-        NSString *databaseId = [[NSNumber numberWithInt: nextId++] stringValue];
-        Database *database = [[Database alloc] initWithSqliteDb:db];
-        [openDatabases setValue:database forKey:databaseId];
-//        callback(@[[NSNull null], databaseId]);
-
         // PREPARE STATEMENT
-//        Database *database = [openDatabases valueForKey:databaseId];
-//                if (database == nil) {
-//                    callback(@[@"No open database found", [NSNull null]]);
-//                    return;
-//                }
-//         sqlite3 *db = [database db]; // todo is need?
+        Database *database = [openDatabases valueForKey:databaseId];
+                if (database == nil) {
+                    callback(@[@"No open database found", [NSNull null]]);
+                    return;
+                }
+         sqlite3 *db = [database db];
          sqlite3_stmt *stmt; // todo is need?
 
-         int rc = sqlite3_prepare_v2(db, [sql UTF8String], -1, &stmt, NULL);
+         int rc = 0;
+
+         @try {
+            rc = sqlite3_prepare_v2(db, [sql UTF8String], -1, &stmt, NULL);
+         }
+         @catch (NSException *exception) {
+            NSString *errName = @"Prepare stmt error: ";
+            NSString *errorText = [errName stringByAppendingString:sql];
+            callback(@[errorText]);
+         }
 
          if (rc != SQLITE_OK) {
              callback(@[[NSString stringWithUTF8String:sqlite3_errmsg(db)]]);
@@ -413,19 +383,6 @@ RCT_EXPORT_METHOD(executeQuery:(NSString *)filename sql: (NSString *)sql andPara
         NSMutableArray* responseArray = [[NSMutableArray alloc] init];
 
         do {
-//            Database *database = [openDatabases valueForKey:databaseId];
-//                    if (database == nil) {
-//                        callback(@[@"No open database found", [NSNull null]]);
-//                        return;
-//                    }
-//                    Statement *statement = [[database statements] objectForKey:statementId];
-//                    if (statement == nil) {
-//                        callback(@[@"No statement found", [NSNull null]]);
-//                        return;
-//                    }
-
-//                    sqlite3 *db = [database db];
-//                    sqlite3_stmt *stmt = [statement stmt];
 
                     int rc = sqlite3_step(stmt);
                     if (rc == SQLITE_ROW) {
@@ -466,10 +423,10 @@ RCT_EXPORT_METHOD(executeQuery:(NSString *)filename sql: (NSString *)sql andPara
                              [responseArray addObject:rowData];
 //                        callback(@[[NSNull null], rowData]);
                     } else if (rc == SQLITE_DONE) {
+                        // FINALIZE STATEMENT
                         sqlite3_finalize(stmt);
                         [[database statements] removeObjectForKey: statementId];
                         break;
-//                        callback(@[[NSNull null], [NSNull null]]);
                     } else {
                         [[database statements] removeObjectForKey: statementId];
                         sqlite3_finalize(stmt);
@@ -479,31 +436,7 @@ RCT_EXPORT_METHOD(executeQuery:(NSString *)filename sql: (NSString *)sql andPara
                     }
         } while(true);
 
-        // CLOSE DATABASE
-
-//        Database *database = [openDatabases valueForKey:databaseId];
-//                if (database == nil) {
-//                    callback(@[@"No open database found"]);
-//                    return;
-//                }
-
-        // Finalize any remaining statments
-        for (NSString* statementId in [database statements]) {
-            Statement *statement = [[database statements] objectForKey:statementId];
-            sqlite3_stmt *stmt = [statement stmt];
-            // We don't care about errors at this point, or at least there's nothing we can do about them
-            sqlite3_finalize(stmt);
-        }
-
-//        sqlite3 *db = [database db];
-        sqlite3_close(db);
-
-        [openDatabases removeObjectForKey: databaseId];
-//        callback(@[[NSNull null]]);
-
         callback(@[[NSNull null], responseArray]);
-
-//        [responseArray release];
 
     });
 }
