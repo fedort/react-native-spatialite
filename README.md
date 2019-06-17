@@ -42,14 +42,24 @@ React Native Spatialite Plugin for Android
 
 ## Usage
 ```javascript
-import SpatialDB from 'react-native-spatialite';
+import db from 'react-native-spatialite';
 
-SpatialDB.executeQuery(pathToDatabase, query, [], (err, res) => {
-  if (err) {
-    console.log(err);
-  } else {
-    console.log(res);
-  }
-});
+db.createConnection('test.db').then(connected => {
+    console.log('Database is connected', connected);
+    return db.getVersion();
+}).then(
+    array => {
+        console.log({arr});
+        return db.executeQuery('SELECT * FROM MyTable');
+    }
+).then(
+    rows => {
+        console.log({rows});
+    }
+).catch(
+    err => {
+        throw err;
+    }
+);
 ```
   

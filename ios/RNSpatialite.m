@@ -128,7 +128,7 @@ RCT_EXPORT_METHOD(openFromFilename:(NSString *)filename callback:(RCTResponseSen
         // spatialite_init_ex (db, cache, 0);
         // NG test implementation
         spatialite_init (0);
-        printf("Spatialite version: %s\n", spatialite_version());
+//        printf("Spatialite version: %s\n", spatialite_version());
 
         NSString *databaseId = [[NSNumber numberWithInt: nextId++] stringValue];
         Database *database = [[Database alloc] initWithSqliteDb:db];
@@ -320,124 +320,141 @@ RCT_EXPORT_METHOD(executeQuery:(NSString *)databaseId sql: (NSString *)sql andPa
     }
     dispatch_async(SpatiaLiteQueue(), ^{
 
-        // 1. prepare statement
-        // 2. step statement
-        // 3. finalize statement
+        @try {
+            // 1. prepare statement
+                    // 2. step statement
+                    // 3. finalize statement
 
-        // cache = spatialite_alloc_connection ();
-        // spatialite_init_ex (db, cache, 0);
-        // NG test implementation
-        spatialite_init (0);
-        printf("Spatialite version: %s\n", spatialite_version());
+                    // cache = spatialite_alloc_connection ();
+                    // spatialite_init_ex (db, cache, 0);
+                    // NG test implementation
+//                    spatialite_init (0);
+//                    printf("Spatialite version: %s\n", spatialite_version());
 
-        // PREPARE STATEMENT
-        Database *database = [openDatabases valueForKey:databaseId];
-                if (database == nil) {
-                    callback(@[@"No open database found", [NSNull null]]);
-                    return;
-                }
-         sqlite3 *db = [database db];
-         sqlite3_stmt *stmt; // todo is need?
-
-         int rc = 0;
-
-         @try {
-            rc = sqlite3_prepare_v2(db, [sql UTF8String], -1, &stmt, NULL);
-         }
-         @catch (NSException *exception) {
-            NSString *errName = @"Prepare stmt error: ";
-            NSString *errorText = [errName stringByAppendingString:sql];
-            callback(@[errorText]);
-         }
-
-         if (rc != SQLITE_OK) {
-             callback(@[[NSString stringWithUTF8String:sqlite3_errmsg(db)]]);
-             return;
-         }
-
-         for (int i=0; i < [params count]; i++){
-             NSObject *param = [params objectAtIndex: i];
-             if ([param isKindOfClass: [NSString class]]) {
-                        NSString *str = (NSString*) param;
-                        int strLength = (int) [str lengthOfBytesUsingEncoding: NSUTF8StringEncoding];
-                        sqlite3_bind_text(stmt, i+1, [str UTF8String], strLength, SQLITE_TRANSIENT);
-                    } else if ([param isKindOfClass: [NSNumber class]]) {
-                 sqlite3_bind_double(stmt, i+1, [(NSNumber *)param doubleValue]);
-             } else if ([param isKindOfClass: [NSNull class]]) {
-                 sqlite3_bind_null(stmt, i+1);
-             } else {
-                 sqlite3_finalize(stmt);
-                 callback(@[@"Parameters must be either numbers or strings" ]);
-                 return;
-             }
-         }
-
-         NSString *statementId = [[NSNumber numberWithInt: nextId++] stringValue];
-         Statement *statement = [[Statement alloc] initWithSqliteStmt: stmt];
-         [[database statements] setValue: statement forKey:statementId];
-
-//         callback(@[[NSNull null], statementId]);
-
-        // STEP STATEMENT
-
-        NSMutableArray* responseArray = [[NSMutableArray alloc] init];
-
-        do {
-
-                    int rc = sqlite3_step(stmt);
-                    if (rc == SQLITE_ROW) {
-                        int totalColumns = sqlite3_column_count(stmt);
-                        NSMutableDictionary *rowData = [NSMutableDictionary dictionaryWithCapacity: totalColumns];
-                        // Go through all columns and fetch each column data.
-                        for (int i=0; i<totalColumns; i++){
-                            // Convert the column data to text (characters).
-
-                            NSObject *value;
-                            NSData *data;
-                            switch (sqlite3_column_type(stmt, i)) {
-                                case SQLITE_INTEGER:
-                                    value = [NSNumber numberWithLongLong: sqlite3_column_int64(stmt, i)];
-                                    break;
-                                case SQLITE_FLOAT:
-                                    value = [NSNumber numberWithDouble: sqlite3_column_double(stmt, i)];
-                                    break;
-                                case SQLITE_NULL:
-                                    value = [NSNull null];
-                                    break;
-                                case SQLITE_BLOB:
-                                    data = [NSData dataWithBytes: sqlite3_column_blob(stmt, i) length: sqlite3_column_bytes16(stmt, i)];
-                                    value = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-                                    break;
-                                case SQLITE_TEXT:
-                                default:
-                                    data = [NSData dataWithBytes: sqlite3_column_blob(stmt, i) length: sqlite3_column_bytes16(stmt, i)];
-                                    value = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-                                    break;
+                    // PREPARE STATEMENT
+                    Database *database = [openDatabases valueForKey:databaseId];
+                            if (database == nil) {
+                                callback(@[@"No open database found", [NSNull null]]);
+                                return;
                             }
-                            char *columnName = (char *)sqlite3_column_name(stmt, i);
-                            // Convert the characters to string.
-                            NSString *utfString = [NSString stringWithUTF8String: columnName];
-                            [rowData setValue: value forKey: [utfString lowercaseString]];
-                        }
-//                           NSNumber* number = [NSNumber numberWithInt:i]; // <-- autoreleased, so you don't need to release it yourself
-                             [responseArray addObject:rowData];
-//                        callback(@[[NSNull null], rowData]);
-                    } else if (rc == SQLITE_DONE) {
-                        // FINALIZE STATEMENT
-                        sqlite3_finalize(stmt);
-                        [[database statements] removeObjectForKey: statementId];
-                        break;
-                    } else {
-                        [[database statements] removeObjectForKey: statementId];
-                        sqlite3_finalize(stmt);
-                        callback(@[[NSString stringWithUTF8String:sqlite3_errmsg(db)], [NSNull null]]);
-                        return;
-                        break;
-                    }
-        } while(true);
+                     sqlite3 *db = [database db];
+                     sqlite3_stmt *stmt; // todo is need?
 
-        callback(@[[NSNull null], responseArray]);
+//                     void *cache;
+//
+//                     cache = spatialite_alloc_connection ();
+//                     spatialite_init_ex (db, cache, 0);
+//                        spatialite_init (0);
 
-    });
+                     int rc = 0;
+
+                     @try {
+                        rc = sqlite3_prepare_v2(db, [sql UTF8String], -1, &stmt, NULL);
+                     }
+                     @catch (NSException *exception) {
+                        NSString *errName = @"Prepare stmt error: ";
+                        NSString *errorText = [errName stringByAppendingString:sql];
+                        callback(@[errorText]);
+                     }
+
+                     if (rc != SQLITE_OK) {
+                        NSString *divider = @"%%";
+                        NSString *errName = [[NSString stringWithUTF8String:sqlite3_errmsg(db)] stringByAppendingString:divider];
+                        NSString *errorText = [errName stringByAppendingString:sql];
+                        callback(@[errorText]);
+//                         callback(@[[NSString stringWithUTF8String:sqlite3_errmsg(db)]]);
+                         return;
+                     }
+
+                     for (int i=0; i < [params count]; i++){
+                         NSObject *param = [params objectAtIndex: i];
+                         if ([param isKindOfClass: [NSString class]]) {
+                                    NSString *str = (NSString*) param;
+                                    int strLength = (int) [str lengthOfBytesUsingEncoding: NSUTF8StringEncoding];
+                                    sqlite3_bind_text(stmt, i+1, [str UTF8String], strLength, SQLITE_TRANSIENT);
+                                } else if ([param isKindOfClass: [NSNumber class]]) {
+                             sqlite3_bind_double(stmt, i+1, [(NSNumber *)param doubleValue]);
+                         } else if ([param isKindOfClass: [NSNull class]]) {
+                             sqlite3_bind_null(stmt, i+1);
+                         } else {
+                             sqlite3_finalize(stmt);
+                             callback(@[@"Parameters must be either numbers or strings" ]);
+                             return;
+                         }
+                     }
+
+                     NSString *statementId = [[NSNumber numberWithInt: nextId++] stringValue];
+                     Statement *statement = [[Statement alloc] initWithSqliteStmt: stmt];
+                     [[database statements] setValue: statement forKey:statementId];
+
+            //         callback(@[[NSNull null], statementId]);
+
+                    // STEP STATEMENT
+
+                    NSMutableArray* responseArray = [[NSMutableArray alloc] init];
+
+                    do {
+
+                                int rc = sqlite3_step(stmt);
+                                if (rc == SQLITE_ROW) {
+                                    int totalColumns = sqlite3_column_count(stmt);
+                                    NSMutableDictionary *rowData = [NSMutableDictionary dictionaryWithCapacity: totalColumns];
+                                    // Go through all columns and fetch each column data.
+                                    for (int i=0; i<totalColumns; i++){
+                                        // Convert the column data to text (characters).
+
+                                        NSObject *value;
+                                        NSData *data;
+                                        switch (sqlite3_column_type(stmt, i)) {
+                                            case SQLITE_INTEGER:
+                                                value = [NSNumber numberWithLongLong: sqlite3_column_int64(stmt, i)];
+                                                break;
+                                            case SQLITE_FLOAT:
+                                                value = [NSNumber numberWithDouble: sqlite3_column_double(stmt, i)];
+                                                break;
+                                            case SQLITE_NULL:
+                                                value = [NSNull null];
+                                                break;
+                                            case SQLITE_BLOB:
+                                                data = [NSData dataWithBytes: sqlite3_column_blob(stmt, i) length: sqlite3_column_bytes16(stmt, i)];
+                                                value = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+                                                break;
+                                            case SQLITE_TEXT:
+                                            default:
+                                                data = [NSData dataWithBytes: sqlite3_column_blob(stmt, i) length: sqlite3_column_bytes16(stmt, i)];
+                                                value = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+                                                break;
+                                        }
+                                        char *columnName = (char *)sqlite3_column_name(stmt, i);
+                                        // Convert the characters to string.
+                                        NSString *utfString = [NSString stringWithUTF8String: columnName];
+                                        [rowData setValue: value forKey: [utfString lowercaseString]];
+                                    }
+            //                           NSNumber* number = [NSNumber numberWithInt:i]; // <-- autoreleased, so you don't need to release it yourself
+                                         [responseArray addObject:rowData];
+            //                        callback(@[[NSNull null], rowData]);
+                                } else if (rc == SQLITE_DONE) {
+                                    // FINALIZE STATEMENT
+                                    sqlite3_finalize(stmt);
+                                    [[database statements] removeObjectForKey: statementId];
+                                    break;
+                                } else {
+                                    [[database statements] removeObjectForKey: statementId];
+                                    sqlite3_finalize(stmt);
+                                    callback(@[[NSString stringWithUTF8String:sqlite3_errmsg(db)], [NSNull null]]);
+                                    return;
+                                    break;
+                                }
+                    } while(true);
+
+                    callback(@[[NSNull null], responseArray]);
+
+                }
+                @catch (NSException *exception) {
+                    NSString *errName = @"SpatiaLite error: ";
+                        NSString *errorText = [errName stringByAppendingString:exception.reason];
+                        callback(@[errorText]);
+                }
+        });
 }
 @end
