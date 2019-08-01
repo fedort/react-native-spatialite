@@ -95,7 +95,7 @@ RCT_EXPORT_METHOD(openFromFilename:(NSString *)filename callback:(RCTResponseSen
         // TODO: Allow creation of database in Library or tmp
         // directories. Maybe also add an option to open read-only
         // direct from the bundle.
-        NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+        NSArray *paths = NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSUserDomainMask, YES);
         NSString *documentsDirectory = [paths objectAtIndex:0];
         NSString *dbPath = filename;
 
