@@ -124,11 +124,8 @@ RCT_EXPORT_METHOD(openFromFilename:(NSString *)filename callback:(RCTResponseSen
             return;
         }
 
-        // cache = spatialite_alloc_connection ();
-        // spatialite_init_ex (db, cache, 0);
-        // NG test implementation
-        spatialite_init (0);
-//        printf("Spatialite version: %s\n", spatialite_version());
+        cache = spatialite_alloc_connection ();
+        spatialite_init_ex (db, cache, 0);
 
         NSString *databaseId = [[NSNumber numberWithInt: nextId++] stringValue];
         Database *database = [[Database alloc] initWithSqliteDb:db];
