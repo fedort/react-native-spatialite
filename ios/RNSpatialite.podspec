@@ -12,10 +12,12 @@ Pod::Spec.new do |s|
   s.author             = { "author" => "author@domain.cn" }
   s.platform     = :ios, "7.0"
   s.source       = { :git => "https://github.com/fedort/react-native-spatialite.git", :tag => "master" }
-  s.source_files  = "RNSpatialite/**/*.{h,m}"
+  
+  s.source_files  = "RNSpatialite.{h,m}", "libspatialite/include/spatialite.h", "libspatialite/include/spatialite/gaiageo.h"
   s.requires_arc = true
+  s.vendored_libraries = '**/*.a'
 
-
+  
   s.dependency "React"
   #s.dependency "others"
 

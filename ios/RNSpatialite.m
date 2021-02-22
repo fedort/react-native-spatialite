@@ -2,7 +2,7 @@
 #import <AVFoundation/AVFoundation.h>
 #import "RNSpatialite.h"
 #include <sqlite3.h>
-#include <spatialite/gaiageo.h>
+#include <gaiageo.h>
 #include <spatialite.h>
 #import <React/RCTLog.h>
 
